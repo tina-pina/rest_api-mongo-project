@@ -13,7 +13,22 @@ const app = express();
 // setup morgan which gives us http request logging
 app.use(morgan('dev'));
 
-// TODO setup your api routes here
+// mongoose
+
+var mongoose = require("mongoose");
+mongoose.connect("mongodb://localhost:27017/fsjstd-restapi", { useNewUrlParser: true });
+
+var db = mongoose.connection;
+
+//if there's an error connecting to the database
+db.on("error", function (err) {
+  console.error("connection error:", err);
+})
+
+//if successful
+db.once("open", function () {
+  console.log("db connection successful")
+})
 
 // setup a friendly greeting for the root route
 app.get('/', (req, res) => {
