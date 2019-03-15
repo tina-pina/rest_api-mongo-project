@@ -2,13 +2,15 @@
 
 var express = require("express");
 var router = express.Router();
+
+// Models
 var User = require("./models").User;
 var Course = require("./models").Course;
 
 //check if valid user input like email
 const { check, validationResult } = require('express-validator/check');
 
-//password hasing
+//password hashing
 const bcryptjs = require('bcryptjs');
 
 //basic auth Authorization header
@@ -16,9 +18,7 @@ const auth = require('basic-auth');
 
 
 // start user routes
-
-
-router.post('/api/users', [
+router.post('/users', [
     check('firstName')
         .exists({ checkNull: true, checkFalsy: true })
         .withMessage('Please provide a value for "last Name"'),
@@ -58,30 +58,37 @@ router.post('/api/users', [
             // by their email (i.e. the user's "username"
             // from the Authorization header).
 
-            const user = User.findOne({ emailAddress: credentials.user });
+            // let user = User.findOne(u => u.emailAddress === credentials.name)
+            // console.log(user)
+            User.findOne({ emailAddress: credentials.name }, function (err, user) {
 
-            // If a user was successfully retrieved from the data store...
-            if (user) {
-                // Use the bcryptjs npm package to compare the user's password
-                // (from the Authorization header) to the user's password
-                // that was retrieved from the data store.
-                const authenticated = bcryptjs
-                    .compareSync(credentials.pass, user.password);
+                //                 // If a user was successfully retrieved from the data store...
+                //                 if (user) {
+                //                     // Use the bcryptjs npm package to compare the user's password
+                //                     // (from the Authorization header) to the user's password
+                //                     // that was retrieved from the data store.
+                //                     const authenticated = bcryptjs.compareSync(credentials.pass, user.password);
 
-                // If the passwords match...
-                if (authenticated) {
-                    // Then store the retrieved user object on the request object
-                    // so any middleware functions that follow this middleware function
-                    // will have access to the user's information.
-                    req.currentUser = user;
-                }
-                else {
-                    message = `Authentication failure for username: ${user.username}`;
-                }
-            }
-            else {
-                message = `User not found for username: ${credentials.name}`;
-            }
+                //                     // If the passwords matcsh...
+                //                     if (authenticated) {
+                //                         // Then store the retrieved user object on the request object
+                //                         // so any middleware functions that follow this middleware function
+                //                         // will have access to the user's information.
+                //                         req.currentUser = user;
+
+                //                     }
+                //                     else {
+                //                         message = `Authentication failure for username: ${user.emailAddress}`;
+                //                     }
+                //                 }
+                //                 else {
+                //                     message = `User not found for username: ${credentials.name}`;
+                //                 }
+                //                 return next()
+
+            });
+
+
 
         }
         else {
@@ -101,7 +108,7 @@ router.post('/api/users', [
         }
     }
 
-    router.get('/api/users', authenticateUser, (req, res) => {
+    router.get('/users', authenticateUser, (req, res) => {
         // get and return the current user...
         const user = req.currentUser;
 
@@ -121,13 +128,10 @@ router.post('/api/users', [
     user.save(function (err, user) {
         if (err) return next(err);
         //return document as json to the client
+        res.location('/')
+        res.status(201)
         res.json(user)
     })
-
-
-    res.location('/')
-    // Set the status to 201 Created and end the response.
-    res.status(201).end();
 });
 
 // end user routes
@@ -137,7 +141,7 @@ router.post('/api/users', [
 
 //Returns a list of courses
 
-router.get("/api/courses", function (req, res, next) {
+router.get("/courses", function (req, res, next) {
     Course.find({})
         //execute query and call callback function
         .exec(function (err, courses) {
@@ -165,13 +169,13 @@ router.param("ID", function (req, res, next, id) {
 })
 
 // Returns a course (including the user that owns the course) for the provided course ID
-router.get("/api/courses/:ID", function (req, res, next) {
+router.get("/courses/:ID", function (req, res, next) {
     //send document to client
     res.json(req.course);
 })
 
 //Creates a course, sets the Location header to the URI for the course, and returns no content
-router.post("/api/courses", function (req, res, next) {
+router.post("/courses", function (req, res, next) {
     //question already loaded by param
     //mongoose automatically creates document => to save: call save on question document
     req.course.save(function (err, course) {
@@ -184,7 +188,7 @@ router.post("/api/courses", function (req, res, next) {
 })
 
 //Updates a course and returns no content
-router.put("/api/courses/:ID", function (req, res, next) {
+router.put("/courses/:ID", function (req, res, next) {
 
     //req.course from router.param???
     req.course.update(req.body, function (err, result) {
@@ -195,15 +199,11 @@ router.put("/api/courses/:ID", function (req, res, next) {
 })
 
 //Deletes a course and returns no content
-router.delete("/api/courses/:ID", function (req, res) {
+router.delete("/courses/:ID", function (req, res) {
     //remove method of mongoose
     req.course.remove(function (err) {
         res.json();
     });
 })
 
-
-
-
-
-
+module.exports = router;

@@ -1,20 +1,21 @@
 'use strict';
 
-// load modules
-const express = require('express');
-const morgan = require('morgan');
+// create the Express app
+var express = require("express");
+var app = express();
+var routes = require("./routes");
+var logger = require('morgan');
+var jsonParser = require("body-parser").json;
 
 // variable to enable global error logging
 const enableGlobalErrorLogging = process.env.ENABLE_GLOBAL_ERROR_LOGGING === 'true';
 
-// create the Express app
-const app = express();
-
 // setup morgan which gives us http request logging
-app.use(morgan('dev'));
+app.use(logger("dev"));
+app.use(jsonParser());
+
 
 // mongoose
-
 var mongoose = require("mongoose");
 mongoose.connect("mongodb://localhost:27017/fsjstd-restapi", { useNewUrlParser: true });
 
@@ -29,6 +30,9 @@ db.on("error", function (err) {
 db.once("open", function () {
   console.log("db connection successful")
 })
+
+// API
+app.use("/api", routes);
 
 // setup a friendly greeting for the root route
 app.get('/', (req, res) => {
