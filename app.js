@@ -14,11 +14,9 @@ const enableGlobalErrorLogging = process.env.ENABLE_GLOBAL_ERROR_LOGGING === 'tr
 app.use(logger("dev"));
 app.use(jsonParser());
 
-
 // mongoose
 var mongoose = require("mongoose");
 mongoose.connect("mongodb://localhost:27017/fsjstd-restapi", { useNewUrlParser: true });
-
 var db = mongoose.connection;
 
 //if there's an error connecting to the database

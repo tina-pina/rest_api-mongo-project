@@ -12,7 +12,7 @@ var UserSchema = new Schema({
 })
 
 var CourseSchema = new Schema({
-    users: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    user: Schema.Types.ObjectId,
     title: String,
     description: String,
     estimatedTime: String,
