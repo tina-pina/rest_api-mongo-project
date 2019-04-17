@@ -15,7 +15,7 @@ const { check, validationResult } = require('express-validator/check');
 //basic auth Authorization header
 const auth = require('basic-auth');
 
-// Authentication 
+// Authentication
 const authenticateUser = (req, res, next) => {
     // Parse the user's credentials from the Authorization header.
     const credentials = auth(req);
@@ -49,7 +49,7 @@ const authenticateUser = (req, res, next) => {
             }
         })
     }
-    // No credential 
+    // No credential
     else {
         const error = new Error();
         error.status = 401
@@ -95,9 +95,8 @@ router.post("/users", [
         password: bcryptjs.hashSync(req.body.password),
     });
     user.save().then(result => {
-        console.log(result);
         res.location('/api');
-        res.status(201).json('User Created!');
+        res.status(201).json(result);
     })
         .catch(err => {
             console.log(err);
@@ -180,7 +179,7 @@ router.post("/courses", [
     // Save Course in DB
     course.save(function (err, course) {
         if (err) return next(err);
-        // document was successfully saved 
+        // document was successfully saved
         else {
             res.location('/' + course.id)
             res.sendStatus(201)
@@ -192,7 +191,8 @@ router.post("/courses", [
 router.put("/courses/:ID", [authenticateUser], function (req, res, next) {
     req.course.update(req.body, function (err, result) {
         if (err) return next(err);
-        //send results in question document back to client
+        //send results back to client
+        res.json(result)
         res.sendStatus(204);
     });
 })
