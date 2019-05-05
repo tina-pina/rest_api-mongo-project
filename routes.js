@@ -1,22 +1,25 @@
-
 'use strict';
+
 
 var express = require("express");
 var router = express.Router();
-
 var bcryptjs = require('bcryptjs');
+
 
 // Models
 var User = require("./models").User;
 var Course = require("./models").Course;
 
+
 //check if valid user input like email
 const { check, validationResult } = require('express-validator/check');
+
 
 //basic auth Authorization header
 const auth = require('basic-auth');
 
-// Authentication
+
+// Authentication 
 const authenticateUser = (req, res, next) => {
     // Parse the user's credentials from the Authorization header.
     const credentials = auth(req);
@@ -38,7 +41,7 @@ const authenticateUser = (req, res, next) => {
                 // Password DOES NOT match
                 else {
                     message = `Authentication failure for username: ${user.emailAddress}`;
-                    res.status(401).json({ message: 'Access Denied' });
+                    res.status(401).json({ errors: ['Access Denied'] });
                 }
                 // User NOT in DB:
             } else {
@@ -46,11 +49,11 @@ const authenticateUser = (req, res, next) => {
                 console.warn(message);
 
                 // Return a response with a 401 Unauthorized HTTP status code.
-                res.status(401).json({ message: 'Access Denied' });
+                res.status(401).json({ errors: ['Access Denied'] });
             }
         })
     }
-    // No credential
+    // No credential 
     else {
         const error = new Error();
         error.status = 401
@@ -58,11 +61,13 @@ const authenticateUser = (req, res, next) => {
     }
 }
 
+
 // Get users
 router.get('/users', [authenticateUser], (req, res) => {
     // get and return the current user...
     res.json(req.currentUser);
 });
+
 
 // Create new user
 router.post('/users', [
@@ -109,17 +114,18 @@ router.post('/users', [
 
 // Returns a the course (including the user that owns the course) for the provided course ID
 router.param("ID", function (req, res, next, id) {
-    Course.findById(id, function (err, doc) {
+    Course.findById(id, function (err, course) {
         if (err) next(err);
-        if (!doc) {
+        if (!course) {
             err = new Error("Not Found");
             err.status = 404;
             next(err);
         }
-        req.course = doc;
+        req.course = course;
         next();
     })
 })
+
 
 // Get courses
 router.get('/courses', (req, res, next) => {
@@ -130,11 +136,13 @@ router.get('/courses', (req, res, next) => {
         });
 });
 
+
 // Returns a course (including the user that owns the course) for the provided course ID
 router.get("/courses/:ID", function (req, res, next) {
     //send document to client
     res.json(req.course);
 })
+
 
 // Creates a course, sets the Location header to the URI for the course, and returns no content
 router.post("/courses", [
@@ -155,49 +163,101 @@ router.post("/courses", [
         const errorMessages = errors.array().map(error => error.msg);
 
         // Return the validation errors to the client.
-        return res.status(400).json({ errors: errorMessages });
+        res.status(400).json({ errors: errorMessages });
+    } else {
+
+        // Create course
+        const course = new Course({
+            user: req.body.user,
+            title: req.body.title,
+            description: req.body.description,
+            estimatedTime: req.body.estimatedTime,
+            materialsNeeded: req.body.materialsNeeded,
+        });
+
+        // Save Course in DB
+        course.save(function (err, course) {
+            if (err) next(err);
+            // document was successfully saved 
+            else {
+                res.status(201).json(course)
+            };
+        })
     }
-
-    // Create course
-    const course = new Course({
-        user: req.body.user,
-        title: req.body.title,
-        description: req.body.description,
-        estimatedTime: req.body.estimatedTime,
-        materialsNeeded: req.body.materialsNeeded,
-    });
-
-    // Save Course in DB
-    course.save(function (err, course) {
-        if (err) next(err);
-        // document was successfully saved
-        else {
-            res.location('/' + course.id)
-            res.sendStatus(201)
-        };
-    })
 })
+
 
 // Updates a course and returns no content
-router.put("/courses/:ID", [authenticateUser], function (req, res, next) {
-    req.course.update(req.body, function (err, result) {
-        if (err) {
-            console.log(err)
-            next(err);
+router.put("/courses/:ID", [
+    authenticateUser,
+    check('title')
+        .exists({ checkNull: true, checkFalsy: true })
+        .withMessage('Please provide a value for "title"'),
+    check('description')
+        .exists({ checkNull: true, checkFalsy: true })
+        .withMessage('Please provide a value for "description"')
+], function (req, res, next) {
+
+    const errors = validationResult(req);
+    // {errors: [....]}
+
+    if (!errors.isEmpty()) {
+        // Use the Array `map()` method to get a list of error messages.
+        const errorMessages = errors.array().map(error => error.msg);
+
+        // Return the validation errors to the client.
+        res.status(400).json({ errors: errorMessages });
+    }
+    else {
+
+        // console.log("current course", req.course.user)
+        let courseOwnerId = req.course.user
+        let currUserId = req.currentUser._id;
+
+        if (currUserId.equals(courseOwnerId)) {
+            // update
+            req.course.update(req.body, function (err, result) {
+
+                if (err) {
+                    console.log(err)
+                    //res.status(400).json(err)
+                    next(err);
+                }
+                //send results in question document back to client
+                else {
+                    console.log("sent")
+                    res.status(200).json(result);
+                }
+
+            });
+        } else {
+            // unauthorized
+            res.status(401).json({ "errors": ["You are not allowed to update other user's courses"] });
         }
-        else {
-            res.sendStatus(204);
-        }
-    });
+
+
+
+    }
 })
+
 
 // Deletes a course and returns no content
 router.delete("/courses/:ID", [authenticateUser], function (req, res) {
-    //remove method of mongoose
-    req.course.remove(function (err) {
-        if (err) next(err);
-        else res.sendStatus(204);
-    });
+    let courseOwnerId = req.course.user
+    let currUserId = req.currentUser._id;
+
+    if (currUserId.equals(courseOwnerId)) {
+        //remove method of mongoose
+        req.course.remove(function (err) {
+            if (err) next(err);
+            else res.status(200).json({ "ok": 1 });
+        });
+    }
+    else {
+        // unauthorized
+        res.status(401).json({ "errors": ["You are not allowed to delete other user's courses"] });
+    }
 })
+
 
 module.exports = router;
