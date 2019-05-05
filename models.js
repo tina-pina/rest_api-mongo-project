@@ -1,8 +1,9 @@
 'use strict';
 
-var mongoose = require("mongoose");
 
+var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
+
 
 var UserSchema = new Schema({
     firstName: String,
@@ -10,6 +11,7 @@ var UserSchema = new Schema({
     emailAddress: String,
     password: String
 })
+
 
 var CourseSchema = new Schema({
     user: Schema.Types.ObjectId,
@@ -19,8 +21,10 @@ var CourseSchema = new Schema({
     materialsNeeded: String
 })
 
+
 const User = mongoose.model('User', UserSchema);
 const Course = mongoose.model('Course', CourseSchema);
+
 
 module.exports.User = User;
 module.exports.Course = Course;
